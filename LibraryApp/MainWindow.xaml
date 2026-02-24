@@ -44,7 +44,8 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
                 <DataGridTextColumn Header="Название" Binding="{Binding Title}" Width="200"/>
-                <DataGridTextColumn Header="Автор" Binding="{Binding Author.FullName}" Width="150"/>
+                <!-- ИЗМЕНЕНО: теперь привязка к AuthorsDisplay -->
+                <DataGridTextColumn Header="Авторы" Binding="{Binding AuthorsDisplay}" Width="200"/>
                 <DataGridTextColumn Header="Жанр" Binding="{Binding Genre.Name}" Width="120"/>
                 <DataGridTextColumn Header="Год" Binding="{Binding PublishYear}" Width="70"/>
                 <DataGridTextColumn Header="ISBN" Binding="{Binding ISBN}" Width="120"/>

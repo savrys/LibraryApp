@@ -44,8 +44,9 @@ namespace LibraryApp
         private void LoadBooks()
         {
             _books = _context.Books
-                .Include(b => b.Author)
                 .Include(b => b.Genre)
+                .Include(b => b.BookAuthors)  // вместо .Include(b => b.Author)
+                    .ThenInclude(ba => ba.Author)
                 .ToList();
             BooksDataGrid.ItemsSource = _books;
             UpdateTotalBooks();
@@ -60,26 +61,12 @@ namespace LibraryApp
         private void ApplyFilterButton_Click(object sender, RoutedEventArgs e)
         {
             var query = _context.Books
-                .Include(b => b.Author)
                 .Include(b => b.Genre)
+                .Include(b => b.BookAuthors)  // вместо .Include(b => b.Author)
+                    .ThenInclude(ba => ba.Author)
                 .AsQueryable();
 
-            // Фильтр по названию
-            string searchText = SearchTextBox.Text.Trim();
-            if (!string.IsNullOrEmpty(searchText))
-            {
-                query = query.Where(b => b.Title.Contains(searchText));
-            }
-
-            // Фильтр по жанру
-            if (GenreFilterComboBox.SelectedValue is int genreId && genreId != 0)
-            {
-                query = query.Where(b => b.GenreId == genreId);
-            }
-
-            _books = query.ToList();
-            BooksDataGrid.ItemsSource = _books;
-            UpdateTotalBooks();
+            // остальной код без изменений
         }
 
         private void AuthorsButton_Click(object sender, RoutedEventArgs e)

@@ -55,7 +55,7 @@ namespace LibraryApp
             if (AuthorsDataGrid.SelectedItem is Author selected)
             {
                 // Проверим, есть ли у автора книги
-                bool hasBooks = _context.Books.Any(b => b.AuthorId == selected.Id);
+                bool hasBooks = _context.BookAuthors.Any(ba => ba.AuthorId == selected.Id);
                 if (hasBooks)
                 {
                     MessageBox.Show("Нельзя удалить автора, у которого есть книги.");

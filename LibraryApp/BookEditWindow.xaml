@@ -1,7 +1,7 @@
 ﻿<Window x:Class="LibraryApp.BookEditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Редактирование книги" Height="450" Width="500"
+        Title="Редактирование книги" Height="500" Width="550"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -20,29 +20,37 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- Название -->
         <Label Grid.Row="0" Grid.Column="0" Content="Название:" Margin="5"/>
         <TextBox Grid.Row="0" Grid.Column="1" x:Name="TitleTextBox" Margin="5" Height="25"/>
 
-        <Label Grid.Row="1" Grid.Column="0" Content="Автор:" Margin="5"/>
-        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="AuthorComboBox" Margin="5" Height="25" 
-                  DisplayMemberPath="FullName" SelectedValuePath="Id"/>
+        <!-- Авторы (множественный выбор) -->
+        <Label Grid.Row="1" Grid.Column="0" Content="Авторы:" Margin="5" VerticalAlignment="Top"/>
+        <ListBox Grid.Row="1" Grid.Column="1" x:Name="AuthorsListBox" Margin="5" Height="100" 
+                 DisplayMemberPath="FullName" SelectionMode="Multiple"/>
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="(можно выбрать несколько авторов)" 
+                   Foreground="Gray" FontSize="10" Margin="5,105,0,0"/>
 
+        <!-- Жанр -->
         <Label Grid.Row="2" Grid.Column="0" Content="Жанр:" Margin="5"/>
         <ComboBox Grid.Row="2" Grid.Column="1" x:Name="GenreComboBox" Margin="5" Height="25" 
                   DisplayMemberPath="Name" SelectedValuePath="Id"/>
 
+        <!-- Год издания -->
         <Label Grid.Row="3" Grid.Column="0" Content="Год издания:" Margin="5"/>
         <TextBox Grid.Row="3" Grid.Column="1" x:Name="PublishYearTextBox" Margin="5" Height="25"/>
 
         <!-- ISBN с подсказкой -->
         <Label Grid.Row="4" Grid.Column="0" Content="ISBN:" Margin="5"/>
         <TextBox Grid.Row="4" Grid.Column="1" x:Name="ISBNTextBox" Margin="5" Height="25"/>
-        <TextBlock Grid.Row="4" Grid.Column="1" Text="(10 или 13 цифр, можно с дефисами)" 
+        <TextBlock Grid.Row="4" Grid.Column="1" Text="(978-5-17-148855-4 или 5-17-148855-5)" 
                    Foreground="Gray" FontSize="10" Margin="5,30,0,0"/>
 
+        <!-- Количество -->
         <Label Grid.Row="5" Grid.Column="0" Content="Количество:" Margin="5"/>
         <TextBox Grid.Row="5" Grid.Column="1" x:Name="QuantityTextBox" Margin="5" Height="25"/>
 
+        <!-- Кнопки -->
         <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Сохранить" Width="80" Margin="5" Click="SaveButton_Click"/>
             <Button Content="Отмена" Width="80" Margin="5" Click="CancelButton_Click"/>

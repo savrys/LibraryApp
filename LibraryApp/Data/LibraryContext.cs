@@ -8,10 +8,10 @@ namespace LibraryApp.Data
         public DbSet<Book> Books { get; set; }
         public DbSet<Author> Authors { get; set; }
         public DbSet<Genre> Genres { get; set; }
+        public DbSet<BookAuthor> BookAuthors { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // Используем SQLite с именем файла "library.db"
             optionsBuilder.UseSqlite("Data Source=library.db");
         }
 
@@ -26,17 +26,11 @@ namespace LibraryApp.Data
                 entity.Property(b => b.PublishYear).IsRequired();
                 entity.Property(b => b.QuantityInStock).IsRequired();
 
-                // Связь с Author (многие к одному)
-                entity.HasOne(b => b.Author)
-                      .WithMany(a => a.Books)
-                      .HasForeignKey(b => b.AuthorId)
-                      .OnDelete(DeleteBehavior.Restrict); // Не удалять книги при удалении автора
-
                 // Связь с Genre (многие к одному)
                 entity.HasOne(b => b.Genre)
                       .WithMany(g => g.Books)
                       .HasForeignKey(b => b.GenreId)
-                      .OnDelete(DeleteBehavior.Cascade); // Удалять книги при удалении жанра
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Настройка Author
@@ -54,6 +48,22 @@ namespace LibraryApp.Data
                 entity.HasKey(g => g.Id);
                 entity.Property(g => g.Name).IsRequired().HasMaxLength(100);
                 entity.Property(g => g.Description).HasMaxLength(500);
+            });
+
+            // Настройка связи многие-ко-многим BookAuthor
+            modelBuilder.Entity<BookAuthor>(entity =>
+            {
+                entity.HasKey(ba => new { ba.BookId, ba.AuthorId });
+
+                entity.HasOne(ba => ba.Book)
+                      .WithMany(b => b.BookAuthors)
+                      .HasForeignKey(ba => ba.BookId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ba => ba.Author)
+                      .WithMany(a => a.BookAuthors)
+                      .HasForeignKey(ba => ba.AuthorId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Windows;
 using LibraryApp.Models;
 using LibraryApp.Data;
-using System.Text.RegularExpressions; // Добавлено для регулярных выражений
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore; // Добавлено для работы с Entity Framework
 
 namespace LibraryApp
 {
@@ -10,6 +12,7 @@ namespace LibraryApp
     {
         private LibraryContext _context;
         private Book _currentBook;
+        private List<Author> _allAuthors; // Добавлено для хранения списка авторов
 
         // Конструктор для добавления
         public BookEditWindow(LibraryContext context)
@@ -31,16 +34,33 @@ namespace LibraryApp
 
             // Заполняем поля
             TitleTextBox.Text = _currentBook.Title;
-            AuthorComboBox.SelectedValue = _currentBook.AuthorId;
             GenreComboBox.SelectedValue = _currentBook.GenreId;
             PublishYearTextBox.Text = _currentBook.PublishYear.ToString();
             ISBNTextBox.Text = _currentBook.ISBN;
             QuantityTextBox.Text = _currentBook.QuantityInStock.ToString();
+
+            // Выделяем авторов книги
+            if (_currentBook.BookAuthors != null && AuthorsListBox.Items.Count > 0)
+            {
+                var authorIds = _currentBook.BookAuthors.Select(ba => ba.AuthorId).ToList();
+                for (int i = 0; i < AuthorsListBox.Items.Count; i++)
+                {
+                    var author = AuthorsListBox.Items[i] as Author;
+                    if (author != null && authorIds.Contains(author.Id))
+                    {
+                        AuthorsListBox.SelectedItems.Add(author);
+                    }
+                }
+            }
         }
 
         private void LoadAuthorsAndGenres()
         {
-            AuthorComboBox.ItemsSource = _context.Authors.ToList();
+            // Загружаем всех авторов
+            _allAuthors = _context.Authors.ToList();
+            AuthorsListBox.ItemsSource = _allAuthors;
+
+            // Загружаем жанры
             GenreComboBox.ItemsSource = _context.Genres.ToList();
         }
 
@@ -53,9 +73,10 @@ namespace LibraryApp
                 return;
             }
 
-            if (AuthorComboBox.SelectedItem == null)
+            // Проверка выбора авторов
+            if (AuthorsListBox.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите автора.");
+                MessageBox.Show("Выберите хотя бы одного автора.");
                 return;
             }
 
@@ -79,7 +100,7 @@ namespace LibraryApp
                 return;
             }
 
-            // ПРОВЕРКА ISBN
+            // Проверка ISBN
             string isbn = ISBNTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(isbn))
             {
@@ -87,7 +108,6 @@ namespace LibraryApp
                 return;
             }
 
-            // Проверка формата ISBN (передаём исходную строку с дефисами)
             string validationMessage = ValidateISBN(isbn);
             if (validationMessage != null)
             {
@@ -102,20 +122,37 @@ namespace LibraryApp
                 return;
             }
 
-            // Если всё хорошо, сохраняем
+            // Сохраняем основные данные книги
             _currentBook.Title = TitleTextBox.Text.Trim();
-            _currentBook.AuthorId = (int)AuthorComboBox.SelectedValue;
             _currentBook.GenreId = (int)GenreComboBox.SelectedValue;
             _currentBook.PublishYear = year;
-            _currentBook.ISBN = isbn; // сохраняем исходный ISBN с дефисами
+            _currentBook.ISBN = isbn;
             _currentBook.QuantityInStock = quantity;
 
+            // Сохраняем или обновляем книгу
             if (_currentBook.Id == 0)
                 _context.Books.Add(_currentBook);
             else
                 _context.Books.Update(_currentBook);
 
-            _context.SaveChanges();
+            _context.SaveChanges(); // Сохраняем, чтобы получить Id для новой книги
+
+            // Обновляем связи с авторами
+            // Удаляем старые связи
+            var existingLinks = _context.BookAuthors.Where(ba => ba.BookId == _currentBook.Id);
+            _context.BookAuthors.RemoveRange(existingLinks);
+
+            // Добавляем новые связи
+            foreach (Author selectedAuthor in AuthorsListBox.SelectedItems)
+            {
+                _context.BookAuthors.Add(new BookAuthor
+                {
+                    BookId = _currentBook.Id,
+                    AuthorId = selectedAuthor.Id
+                });
+            }
+
+            _context.SaveChanges(); // Сохраняем связи
             DialogResult = true;
             Close();
         }
@@ -134,22 +171,18 @@ namespace LibraryApp
                 return "Введите ISBN.";
             }
 
-            // Убираем лишние пробелы в начале и конце
             isbn = isbn.Trim();
 
-            // Проверка формата ISBN-13 (пример: 978-5-17-148855-4)
-            // Шаблон: 3 цифры - 1-5 цифр - 1-7 цифр - 1-6 цифр - 1 цифра
+            // Проверка формата ISBN-13
             if (Regex.IsMatch(isbn, @"^\d{3}-\d{1,5}-\d{1,7}-\d{1,6}-\d$"))
             {
                 string[] parts = isbn.Split('-');
 
-                // Проверка префикса (должен быть 978 или 979)
                 if (parts[0] != "978" && parts[0] != "979")
                 {
                     return "ISBN-13 должен начинаться с 978 или 979.";
                 }
 
-                // Проверка, что все части содержат только цифры
                 for (int i = 0; i < parts.Length; i++)
                 {
                     if (!parts[i].All(char.IsDigit))
@@ -158,16 +191,14 @@ namespace LibraryApp
                     }
                 }
 
-                return null; // ISBN-13 корректен по формату
+                return null; // ISBN-13 корректен
             }
 
-            // Проверка формата ISBN-10 (пример: 5-17-148855-5)
-            // Шаблон: 1-5 цифр - 1-7 цифр - 1-6 цифр - 1 цифра или X
+            // Проверка формата ISBN-10
             else if (Regex.IsMatch(isbn, @"^\d{1,5}-\d{1,7}-\d{1,6}-[\dXx]$"))
             {
                 string[] parts = isbn.Split('-');
 
-                // Проверка, что первые три части содержат только цифры
                 for (int i = 0; i < 3; i++)
                 {
                     if (!parts[i].All(char.IsDigit))
@@ -176,14 +207,13 @@ namespace LibraryApp
                     }
                 }
 
-                // Проверка последней части (цифра или X)
                 string lastPart = parts[3].ToUpper();
                 if (lastPart.Length != 1 || (!char.IsDigit(lastPart[0]) && lastPart != "X"))
                 {
                     return "Последняя часть ISBN-10 должна быть одной цифрой или X.";
                 }
 
-                return null; // ISBN-10 корректен по формату
+                return null; // ISBN-10 корректен
             }
 
             return "Неверный формат ISBN. Используйте формат: 978-5-17-148855-4 (ISBN-13) или 5-17-148855-5 (ISBN-10)";
