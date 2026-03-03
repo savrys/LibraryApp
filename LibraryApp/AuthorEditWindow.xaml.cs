@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Windows;
 using LibraryApp.Models;
 using LibraryApp.Data;
@@ -52,6 +53,7 @@ namespace LibraryApp
             string firstName = FirstNameTextBox.Text.Trim();
             string lastName = LastNameTextBox.Text.Trim();
             string country = CountryTextBox.Text.Trim();
+            DateTime birthDate = BirthDatePicker.SelectedDate.Value; // объявляем дату
 
             if (!IsValidName(firstName))
             {
@@ -75,13 +77,13 @@ namespace LibraryApp
             // Список реальных стран (можно расширить)
             string[] validCountries = new string[]
             {
-        "Россия", "Украина", "Беларусь", "Казахстан", "США", "Канада", "Мексика",
-        "Бразилия", "Аргентина", "Великобритания", "Франция", "Германия", "Италия",
-        "Испания", "Португалия", "Нидерланды", "Бельгия", "Швейцария", "Австрия",
-        "Польша", "Чехия", "Словакия", "Венгрия", "Болгария", "Румыния", "Греция",
-        "Швеция", "Норвегия", "Финляндия", "Дания", "Исландия", "Япония", "Китай",
-        "Индия", "Корея", "Вьетнам", "Таиланд", "Турция", "Израиль", "Египет",
-        "ЮАР", "Австралия", "Новая Зеландия"
+                "Россия", "Украина", "Беларусь", "Казахстан", "США", "Канада", "Мексика",
+                "Бразилия", "Аргентина", "Великобритания", "Франция", "Германия", "Италия",
+                "Испания", "Португалия", "Нидерланды", "Бельгия", "Швейцария", "Австрия",
+                "Польша", "Чехия", "Словакия", "Венгрия", "Болгария", "Румыния", "Греция",
+                "Швеция", "Норвегия", "Финляндия", "Дания", "Исландия", "Япония", "Китай",
+                "Индия", "Корея", "Вьетнам", "Таиланд", "Турция", "Израиль", "Египет",
+                "ЮАР", "Австралия", "Новая Зеландия"
             };
 
             // Проверяем, есть ли страна в списке (регистронезависимо)
@@ -103,10 +105,26 @@ namespace LibraryApp
                 return;
             }
 
+            // ===== УСИЛЕННАЯ ПРОВЕРКА НА УНИКАЛЬНОСТЬ =====
+            // Проверяем существование автора с такими же именем, фамилией, датой рождения и страной
+            bool exists = _context.Authors.Any(a =>
+                a.FirstName == firstName &&
+                a.LastName == lastName &&
+                a.BirthDate.Date == birthDate.Date && // сравниваем только дату
+                a.Country == country &&
+                a.Id != _currentAuthor.Id); // исключаем текущего при редактировании
+
+            if (exists)
+            {
+                MessageBox.Show("Автор с такими именем, фамилией, датой рождения и страной уже существует.");
+                return;
+            }
+            // =============================================
+
             // Если всё хорошо, сохраняем
             _currentAuthor.FirstName = firstName;
             _currentAuthor.LastName = lastName;
-            _currentAuthor.BirthDate = BirthDatePicker.SelectedDate.Value;
+            _currentAuthor.BirthDate = birthDate;
             _currentAuthor.Country = country;
 
             if (_currentAuthor.Id == 0)

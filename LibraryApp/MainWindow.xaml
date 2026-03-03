@@ -44,9 +44,9 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
                 <DataGridTextColumn Header="Название" Binding="{Binding Title}" Width="200"/>
-                <!-- ИЗМЕНЕНО: теперь привязка к AuthorsDisplay -->
                 <DataGridTextColumn Header="Авторы" Binding="{Binding AuthorsDisplay}" Width="200"/>
-                <DataGridTextColumn Header="Жанр" Binding="{Binding Genre.Name}" Width="120"/>
+                <!-- ИСПРАВЛЕНО: используем GenresDisplay вместо Genre.Name -->
+                <DataGridTextColumn Header="Жанры" Binding="{Binding GenresDisplay}" Width="150"/>
                 <DataGridTextColumn Header="Год" Binding="{Binding PublishYear}" Width="70"/>
                 <DataGridTextColumn Header="ISBN" Binding="{Binding ISBN}" Width="120"/>
                 <DataGridTextColumn Header="В наличии" Binding="{Binding QuantityInStock}" Width="80"/>

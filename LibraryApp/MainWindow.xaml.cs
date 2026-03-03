@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using Microsoft.EntityFrameworkCore;
 using LibraryApp.Models;
 using LibraryApp.Data;
@@ -44,9 +43,10 @@ namespace LibraryApp
         private void LoadBooks()
         {
             _books = _context.Books
-                .Include(b => b.Genre)
-                .Include(b => b.BookAuthors)  // вместо .Include(b => b.Author)
+                .Include(b => b.BookAuthors)
                     .ThenInclude(ba => ba.Author)
+                .Include(b => b.BookGenres)
+                    .ThenInclude(bg => bg.Genre)
                 .ToList();
             BooksDataGrid.ItemsSource = _books;
             UpdateTotalBooks();
@@ -61,25 +61,41 @@ namespace LibraryApp
         private void ApplyFilterButton_Click(object sender, RoutedEventArgs e)
         {
             var query = _context.Books
-                .Include(b => b.Genre)
-                .Include(b => b.BookAuthors)  // вместо .Include(b => b.Author)
+                .Include(b => b.BookAuthors)
                     .ThenInclude(ba => ba.Author)
+                .Include(b => b.BookGenres)
+                    .ThenInclude(bg => bg.Genre)
                 .AsQueryable();
 
-            // остальной код без изменений
+            string searchText = SearchTextBox.Text.Trim();
+            if (!string.IsNullOrEmpty(searchText))
+            {
+                query = query.Where(b => b.Title.Contains(searchText));
+            }
+
+            if (GenreFilterComboBox.SelectedValue is int genreId && genreId != 0)
+            {
+                query = query.Where(b => b.BookGenres.Any(bg => bg.GenreId == genreId));
+            }
+
+            _books = query.ToList();
+            BooksDataGrid.ItemsSource = _books;
+            UpdateTotalBooks();
         }
 
         private void AuthorsButton_Click(object sender, RoutedEventArgs e)
         {
             var authorsWindow = new AuthorsWindow(_context);
+            authorsWindow.Owner = this;
             authorsWindow.ShowDialog();
-            LoadBooks(); // обновляем после закрытия
-            LoadGenres(); // возможно, изменились жанры? нет, но можно перезагрузить на всякий случай
+            LoadBooks();
+            LoadGenres();
         }
 
         private void GenresButton_Click(object sender, RoutedEventArgs e)
         {
             var genresWindow = new GenresWindow(_context);
+            genresWindow.Owner = this;
             genresWindow.ShowDialog();
             LoadBooks();
             LoadGenres();
@@ -88,6 +104,7 @@ namespace LibraryApp
         private void AddBookButton_Click(object sender, RoutedEventArgs e)
         {
             var bookWindow = new BookEditWindow(_context);
+            bookWindow.Owner = this;
             bookWindow.ShowDialog();
             LoadBooks();
         }
@@ -97,6 +114,7 @@ namespace LibraryApp
             if (BooksDataGrid.SelectedItem is Book selectedBook)
             {
                 var bookWindow = new BookEditWindow(_context, selectedBook);
+                bookWindow.Owner = this;
                 bookWindow.ShowDialog();
                 LoadBooks();
             }

@@ -52,13 +52,11 @@ namespace LibraryApp
         {
             if (GenresDataGrid.SelectedItem is Genre selected)
             {
-                // Проверим, есть ли книги этого жанра
-                bool hasBooks = _context.Books.Any(b => b.GenreId == selected.Id);
+                // Проверяем, есть ли книги, связанные с этим жанром (через BookGenres)
+                bool hasBooks = _context.BookGenres.Any(bg => bg.GenreId == selected.Id);
                 if (hasBooks)
                 {
-                    // По нашей настройке каскадного удаления книги удалятся вместе с жанром
-                    // Спросим подтверждение
-                    var result = MessageBox.Show($"Удаление жанра приведёт к удалению всех книг этого жанра. Продолжить?",
+                    var result = MessageBox.Show("Удаление жанра приведёт к удалению всех связей с книгами этого жанра. Продолжить?",
                                                   "Предупреждение", MessageBoxButton.YesNo);
                     if (result != MessageBoxResult.Yes)
                         return;

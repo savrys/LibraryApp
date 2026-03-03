@@ -11,18 +11,17 @@ namespace LibraryApp.Models
         public string ISBN { get; set; } = string.Empty;
         public int QuantityInStock { get; set; }
 
-        // Внешний ключ для жанра
-        public int GenreId { get; set; }
-
         // Навигационные свойства
-        public Genre Genre { get; set; } = null!;
-
-        // Связь многие-ко-многим с авторами
         public ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
+        public ICollection<BookGenre> BookGenres { get; set; } = new List<BookGenre>();
 
-        // ДОБАВЬТЕ ЭТО СВОЙСТВО ЗДЕСЬ:
-        public string AuthorsDisplay => BookAuthors != null
+        // Вычисляемые поля для отображения
+        public string AuthorsDisplay => BookAuthors != null && BookAuthors.Any()
             ? string.Join(", ", BookAuthors.Select(ba => ba.Author?.FullName ?? "Неизвестный автор"))
+            : "";
+
+        public string GenresDisplay => BookGenres != null && BookGenres.Any()
+            ? string.Join(", ", BookGenres.Select(bg => bg.Genre?.Name ?? "Неизвестный жанр"))
             : "";
     }
 }

@@ -31,7 +31,17 @@ namespace LibraryApp
                 return;
             }
 
-            _currentGenre.Name = NameTextBox.Text.Trim();
+            string newName = NameTextBox.Text.Trim();
+
+            // Проверка на существование жанра с таким же именем
+            bool exists = _context.Genres.Any(g => g.Name == newName && g.Id != _currentGenre.Id);
+            if (exists)
+            {
+                MessageBox.Show("Жанр с таким названием уже существует.");
+                return;
+            }
+
+            _currentGenre.Name = newName;
             _currentGenre.Description = DescriptionTextBox.Text.Trim();
 
             if (_currentGenre.Id == 0)

@@ -1,10 +1,12 @@
-﻿using System;
+﻿// BookEditWindow.xaml.cs
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using LibraryApp.Models;
 using LibraryApp.Data;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore; // Добавлено для работы с Entity Framework
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApp
 {
@@ -12,9 +14,9 @@ namespace LibraryApp
     {
         private LibraryContext _context;
         private Book _currentBook;
-        private List<Author> _allAuthors; // Добавлено для хранения списка авторов
+        private List<Author> _allAuthors;
+        private List<Genre> _allGenres;
 
-        // Конструктор для добавления
         public BookEditWindow(LibraryContext context)
         {
             InitializeComponent();
@@ -24,7 +26,6 @@ namespace LibraryApp
             DataContext = _currentBook;
         }
 
-        // Конструктор для редактирования
         public BookEditWindow(LibraryContext context, Book book)
         {
             InitializeComponent();
@@ -32,14 +33,11 @@ namespace LibraryApp
             LoadAuthorsAndGenres();
             _currentBook = book;
 
-            // Заполняем поля
             TitleTextBox.Text = _currentBook.Title;
-            GenreComboBox.SelectedValue = _currentBook.GenreId;
             PublishYearTextBox.Text = _currentBook.PublishYear.ToString();
             ISBNTextBox.Text = _currentBook.ISBN;
             QuantityTextBox.Text = _currentBook.QuantityInStock.ToString();
 
-            // Выделяем авторов книги
             if (_currentBook.BookAuthors != null && AuthorsListBox.Items.Count > 0)
             {
                 var authorIds = _currentBook.BookAuthors.Select(ba => ba.AuthorId).ToList();
@@ -47,21 +45,29 @@ namespace LibraryApp
                 {
                     var author = AuthorsListBox.Items[i] as Author;
                     if (author != null && authorIds.Contains(author.Id))
-                    {
                         AuthorsListBox.SelectedItems.Add(author);
-                    }
+                }
+            }
+
+            if (_currentBook.BookGenres != null && GenresListBox.Items.Count > 0)
+            {
+                var genreIds = _currentBook.BookGenres.Select(bg => bg.GenreId).ToList();
+                for (int i = 0; i < GenresListBox.Items.Count; i++)
+                {
+                    var genre = GenresListBox.Items[i] as Genre;
+                    if (genre != null && genreIds.Contains(genre.Id))
+                        GenresListBox.SelectedItems.Add(genre);
                 }
             }
         }
 
         private void LoadAuthorsAndGenres()
         {
-            // Загружаем всех авторов
             _allAuthors = _context.Authors.ToList();
             AuthorsListBox.ItemsSource = _allAuthors;
 
-            // Загружаем жанры
-            GenreComboBox.ItemsSource = _context.Genres.ToList();
+            _allGenres = _context.Genres.ToList();
+            GenresListBox.ItemsSource = _allGenres;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -73,16 +79,15 @@ namespace LibraryApp
                 return;
             }
 
-            // Проверка выбора авторов
             if (AuthorsListBox.SelectedItems.Count == 0)
             {
                 MessageBox.Show("Выберите хотя бы одного автора.");
                 return;
             }
 
-            if (GenreComboBox.SelectedItem == null)
+            if (GenresListBox.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите жанр.");
+                MessageBox.Show("Выберите хотя бы один жанр.");
                 return;
             }
 
@@ -122,9 +127,17 @@ namespace LibraryApp
                 return;
             }
 
+            // ===== НОВАЯ ПРОВЕРКА НА ДУБЛИКАТ ISBN =====
+            bool isbnExists = _context.Books.Any(b => b.ISBN == isbn && b.Id != _currentBook.Id);
+            if (isbnExists)
+            {
+                MessageBox.Show("Книга с таким ISBN уже существует.");
+                return;
+            }
+            // ===========================================
+
             // Сохраняем основные данные книги
             _currentBook.Title = TitleTextBox.Text.Trim();
-            _currentBook.GenreId = (int)GenreComboBox.SelectedValue;
             _currentBook.PublishYear = year;
             _currentBook.ISBN = isbn;
             _currentBook.QuantityInStock = quantity;
@@ -135,20 +148,31 @@ namespace LibraryApp
             else
                 _context.Books.Update(_currentBook);
 
-            _context.SaveChanges(); // Сохраняем, чтобы получить Id для новой книги
+            _context.SaveChanges(); // Сохраняем, чтобы получить Id
 
             // Обновляем связи с авторами
-            // Удаляем старые связи
-            var existingLinks = _context.BookAuthors.Where(ba => ba.BookId == _currentBook.Id);
-            _context.BookAuthors.RemoveRange(existingLinks);
+            var existingAuthorLinks = _context.BookAuthors.Where(ba => ba.BookId == _currentBook.Id);
+            _context.BookAuthors.RemoveRange(existingAuthorLinks);
 
-            // Добавляем новые связи
             foreach (Author selectedAuthor in AuthorsListBox.SelectedItems)
             {
                 _context.BookAuthors.Add(new BookAuthor
                 {
                     BookId = _currentBook.Id,
                     AuthorId = selectedAuthor.Id
+                });
+            }
+
+            // Обновляем связи с жанрами
+            var existingGenreLinks = _context.BookGenres.Where(bg => bg.BookId == _currentBook.Id);
+            _context.BookGenres.RemoveRange(existingGenreLinks);
+
+            foreach (Genre selectedGenre in GenresListBox.SelectedItems)
+            {
+                _context.BookGenres.Add(new BookGenre
+                {
+                    BookId = _currentBook.Id,
+                    GenreId = selectedGenre.Id
                 });
             }
 
@@ -163,57 +187,37 @@ namespace LibraryApp
             Close();
         }
 
-        // Метод для проверки ISBN
         private string ValidateISBN(string isbn)
         {
             if (string.IsNullOrWhiteSpace(isbn))
-            {
                 return "Введите ISBN.";
-            }
 
             isbn = isbn.Trim();
 
-            // Проверка формата ISBN-13
             if (Regex.IsMatch(isbn, @"^\d{3}-\d{1,5}-\d{1,7}-\d{1,6}-\d$"))
             {
                 string[] parts = isbn.Split('-');
-
                 if (parts[0] != "978" && parts[0] != "979")
-                {
                     return "ISBN-13 должен начинаться с 978 или 979.";
-                }
 
                 for (int i = 0; i < parts.Length; i++)
-                {
                     if (!parts[i].All(char.IsDigit))
-                    {
                         return $"Часть {i + 1} ISBN должна содержать только цифры.";
-                    }
-                }
 
-                return null; // ISBN-13 корректен
+                return null!;
             }
-
-            // Проверка формата ISBN-10
             else if (Regex.IsMatch(isbn, @"^\d{1,5}-\d{1,7}-\d{1,6}-[\dXx]$"))
             {
                 string[] parts = isbn.Split('-');
-
                 for (int i = 0; i < 3; i++)
-                {
                     if (!parts[i].All(char.IsDigit))
-                    {
                         return $"Часть {i + 1} ISBN должна содержать только цифры.";
-                    }
-                }
 
                 string lastPart = parts[3].ToUpper();
                 if (lastPart.Length != 1 || (!char.IsDigit(lastPart[0]) && lastPart != "X"))
-                {
                     return "Последняя часть ISBN-10 должна быть одной цифрой или X.";
-                }
 
-                return null; // ISBN-10 корректен
+                return null!;
             }
 
             return "Неверный формат ISBN. Используйте формат: 978-5-17-148855-4 (ISBN-13) или 5-17-148855-5 (ISBN-10)";
